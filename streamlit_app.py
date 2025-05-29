@@ -173,6 +173,23 @@ def show_auth_ui():
                 else:
                     st.error(message)
 
+def validate_news_text(text):
+    """Validate the input news text"""
+    if not text or len(text.strip()) == 0:
+        return False, "Please enter some text to analyze."
+    
+    # Check minimum length (50 characters)
+    if len(text.strip()) < 50:
+        return False, "News text must be at least 50 characters long to be analyzed properly."
+    
+    # Check if it starts with a location prefix (common in Malay news)
+    location_prefixes = ["MELAKA:", "KOTA BHARU:", "KUALA LUMPUR:", "JOHOR BAHRU:", "PUTRAJAYA:", "SHAH ALAM:"]
+    has_prefix = any(text.strip().upper().startswith(prefix) for prefix in location_prefixes)
+    if not has_prefix:
+        return False, "News text should start with a location prefix (e.g., 'MELAKA:', 'KUALA LUMPUR:', etc.)"
+    
+    return True, ""
+
 # Main app UI
 def show_main_app():
     st.title("Malay Fake News Detection")
@@ -195,12 +212,22 @@ def show_main_app():
         mengenal pasti motif kejadian.
         
         Note: News should be in Malay language and follow a similar formal news format.
+        Requirements:
+        1. Must start with a location prefix (e.g., 'MELAKA:', 'KUALA LUMPUR:', etc.)
+        2. Must be at least 50 characters long
+        3. Should follow formal news writing style
         """)
     
-    news_text = st.text_area("Enter news text to analyze:")
+    news_text = st.text_area("Enter news text to analyze:", 
+                            help="Enter the news text following the format shown in the example above. " 
+                                 "The text should start with a location prefix and be at least 50 characters long.")
     
     if st.button("Analyze"):
-        if news_text:
+        # Validate input
+        is_valid, error_message = validate_news_text(news_text)
+        if not is_valid:
+            st.error(error_message)
+        else:
             model = load_model()
             if model is not None:
                 prediction, confidence = predict_fake_news(news_text, model)
