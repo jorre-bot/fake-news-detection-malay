@@ -4,11 +4,32 @@ import sqlite3
 import pandas as pd
 from datetime import datetime
 import os
+import requests
+import tempfile
 
 # Load the model
 @st.cache_resource
 def load_model():
-    return joblib.load('best_fake_news_model.pkl')
+    # URL to your model file in GitHub releases
+    model_url = "https://github.com/jorre-bot/fake-news-detection-malay/releases/download/v1.0.0/best_fake_news_model.pkl"
+    
+    # Create a temporary file to store the downloaded model
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+        # Download the model
+        with st.spinner("Downloading model..."):
+            response = requests.get(model_url, stream=True)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    tmp_file.write(chunk)
+    
+    # Load the model from the temporary file
+    model = joblib.load(tmp_file.name)
+    
+    # Clean up the temporary file
+    os.unlink(tmp_file.name)
+    
+    return model
 
 # Initialize the database
 def init_db():
