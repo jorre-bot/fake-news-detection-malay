@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malay Fake News Detection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 50px;
+        }
+        .container {
+            max-width: 800px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .result-box {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .fake {
+            background-color: #ffe6e6;
+            border: 2px solid #ff4444;
+        }
+        .real {
+            background-color: #e6ffe6;
+            border: 2px solid #44ff44;
+        }
+        .user-info {
+            margin-bottom: 20px;
+        }
+        .example-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 0.9em;
+        }
+        .char-counter {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .invalid-feedback {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="user-info d-flex justify-content-between align-items-center">
+            <span>Welcome, <strong>{{ current_user.username }}</strong>!</span>
+            <div>
+                <a href="{{ url_for('history') }}" class="btn btn-outline-primary me-2">View History</a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
+            </div>
+        </div>
+        
+        <div class="card p-4">
+            <h1 class="text-center mb-4">Malay Fake News Detection</h1>
+            <div class="form-group">
+                <label for="newsText" class="mb-2">Enter news text to analyze:</label>
+                <textarea class="form-control mb-3" id="newsText" rows="6" placeholder="Paste your news text here..." minlength="50"></textarea>
+                <div class="char-counter">Characters: <span id="charCount">0</span> (minimum 50 required)</div>
+                <div class="invalid-feedback">Please enter at least 50 characters of news text.</div>
+                
+                <div class="example-box mt-3">
+                    <h6>Example News Format:</h6>
+                    <p class="mb-1">KOTA BHARU: Polis sedang giat mengesan tiga individu yang disyaki terlibat dalam satu kes rompakan bersenjata di sebuah kedai emas di pusat bandar pagi tadi. Ketua Polis Daerah Kota Bharu berkata, usaha menjejaki suspek sedang dipergiat dan orang ramai diminta menyalurkan maklumat sekiranya melihat atau mengenali mana-mana suspek yang terlibat. Siasatan lanjut masih dijalankan bagi mengenal pasti motif kejadian.</p>
+                    <small class="text-muted">Note: News should be in Malay language and follow a similar formal news format.</small>
+                </div>
+                
+                <button class="btn btn-primary w-100 mt-3" onclick="analyzeFakeNews()">Analyze</button>
+            </div>
+            
+            <div id="resultBox" class="result-box">
+                <h4 class="text-center mb-3">Analysis Result</h4>
+                <p class="text-center" id="predictionResult"></p>
+            </div>
+
+            <div class="mt-4">
+                <p class="text-muted text-center">This tool uses machine learning to analyze and detect potential fake news in Malay language texts.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Update character count
+        document.getElementById('newsText').addEventListener('input', function() {
+            const charCount = this.value.length;
+            document.getElementById('charCount').textContent = charCount;
+            
+            if (charCount < 50) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        function analyzeFakeNews() {
+            const newsText = $('#newsText').val();
+            if (!newsText || newsText.length < 50) {
+                $('#newsText').addClass('is-invalid');
+                return;
+            }
+
+            $.ajax({
+                url: '/predict',
+                type: 'POST',
+                data: {
+                    news_text: newsText
+                },
+                success: function(response) {
+                    const resultBox = $('#resultBox');
+                    resultBox.show();
+                    
+                    if (response.status === 'success') {
+                        resultBox.removeClass('fake real');
+                        resultBox.addClass(response.prediction.toLowerCase());
+                        $('#predictionResult').html(
+                            `<strong>Prediction: ${response.prediction}</strong><br>
+                            Confidence: ${response.confidence}`
+                        );
+                    } else {
+                        $('#predictionResult').html(
+                            `<strong class="text-danger">Error: ${response.message}</strong>`
+                        );
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while analyzing the text.');
+                }
+            });
+        }
+    </script>
+</body>
+</html> 
