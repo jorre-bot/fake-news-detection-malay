@@ -183,10 +183,31 @@ def validate_news_text(text):
         return False, "News text must be at least 50 characters long to be analyzed properly."
     
     # Check if it starts with a location prefix (common in Malay news)
-    location_prefixes = ["MELAKA:", "KOTA BHARU:", "KUALA LUMPUR:", "JOHOR BAHRU:", "PUTRAJAYA:", "SHAH ALAM:"]
-    has_prefix = any(text.strip().upper().startswith(prefix) for prefix in location_prefixes)
+    location_prefixes = ["MELAKA:", "KOTA BHARU:", "KUALA LUMPUR:", "JOHOR BAHRU:", "PUTRAJAYA:", "SHAH ALAM:", "IPOH:", "SEREMBAN:", "ALOR SETAR:", "GEORGE TOWN:"]
+    
+    # Convert text to uppercase for case-insensitive comparison
+    text_upper = text.strip().upper()
+    
+    # Check if text starts with location prefix
+    has_prefix = any(text_upper.startswith(prefix) for prefix in location_prefixes)
     if not has_prefix:
-        return False, "News text should start with a location prefix (e.g., 'MELAKA:', 'KUALA LUMPUR:', etc.)"
+        return False, f"News text must start with a location prefix. Valid prefixes include: {', '.join(location_prefixes)}"
+    
+    # Check for common news article elements
+    if ":" not in text:
+        return False, "News text must include a location prefix followed by a colon (:)"
+    
+    # Check for proper sentence structure
+    sentences = text.split('.')
+    if len(sentences) < 2:
+        return False, "News text must contain at least two complete sentences separated by periods."
+    
+    # Check for common Malay news words
+    common_words = ["polis", "kerajaan", "menteri", "pegawai", "penduduk", "kawasan", "negeri", "daerah", "majlis"]
+    text_lower = text.lower()
+    has_common_words = any(word in text_lower for word in common_words)
+    if not has_common_words:
+        return False, "News text should contain common Malay news terms (e.g., polis, kerajaan, menteri, etc.)"
     
     return True, ""
 
@@ -202,31 +223,46 @@ def show_main_app():
     
     st.write("This tool uses machine learning to analyze and detect potential fake news in Malay language texts.")
     
-    # Example format
-    with st.expander("Example Format"):
-        st.markdown("""
-        KOTA BHARU: Polis sedang giat mengesan tiga individu yang disyaki terlibat dalam satu kes rompakan 
-        bersenjata di sebuah kedai emas di pusat bandar pagi tadi. Ketua Polis Daerah Kota Bharu berkata, 
-        usaha menjejaki suspek sedang dipergiat dan orang ramai diminta menyalurkan maklumat sekiranya 
-        melihat atau mengenali mana-mana suspek yang terlibat. Siasatan lanjut masih dijalankan bagi 
-        mengenal pasti motif kejadian.
-        
-        Note: News should be in Malay language and follow a similar formal news format.
-        Requirements:
-        1. Must start with a location prefix (e.g., 'MELAKA:', 'KUALA LUMPUR:', etc.)
-        2. Must be at least 50 characters long
-        3. Should follow formal news writing style
-        """)
+    # Make example format more prominent
+    st.markdown("""
+    ### 📝 Required News Format
+    Your news text **must** follow this format:
+    """)
     
-    news_text = st.text_area("Enter news text to analyze:", 
-                            help="Enter the news text following the format shown in the example above. " 
-                                 "The text should start with a location prefix and be at least 50 characters long.")
+    example_text = """KOTA BHARU: Polis sedang giat mengesan tiga individu yang disyaki terlibat dalam satu kes rompakan 
+    bersenjata di sebuah kedai emas di pusat bandar pagi tadi. Ketua Polis Daerah Kota Bharu berkata, 
+    usaha menjejaki suspek sedang dipergiat dan orang ramai diminta menyalurkan maklumat sekiranya 
+    melihat atau mengenali mana-mana suspek yang terlibat. Siasatan lanjut masih dijalankan bagi 
+    mengenal pasti motif kejadian."""
+    
+    st.code(example_text, language="text")
+    
+    st.markdown("""
+    ### ✅ Format Requirements:
+    1. **Must start** with a location prefix followed by colon (e.g., 'KOTA BHARU:', 'KUALA LUMPUR:', etc.)
+    2. **Minimum length**: 50 characters
+    3. **Must contain** at least two complete sentences
+    4. **Must include** common Malay news terms (e.g., polis, kerajaan, menteri, etc.)
+    5. **Must follow** formal news writing style
+    """)
+    
+    news_text = st.text_area(
+        "Enter news text to analyze:",
+        help="Copy the example format above and replace with your news content. Make sure to follow all format requirements.",
+        height=200
+    )
+    
+    # Add a "Copy Example" button
+    if st.button("📋 Copy Example Format"):
+        st.session_state.news_text = example_text
+        st.rerun()
     
     if st.button("Analyze"):
         # Validate input
         is_valid, error_message = validate_news_text(news_text)
         if not is_valid:
-            st.error(error_message)
+            st.error(f"❌ {error_message}")
+            st.info("👆 Please check the example format above and try again.")
         else:
             model = load_model()
             if model is not None:
