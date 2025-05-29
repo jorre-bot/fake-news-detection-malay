@@ -224,14 +224,9 @@ def show_main_app():
     
     news_text = st.text_area(
         "Enter news text to analyze:",
-        help="Copy the example format above and replace with your news content. Make sure to follow all format requirements.",
+        help="Enter your news content following the format requirements above.",
         height=200
     )
-    
-    # Add a "Copy Example" button
-    if st.button("📋 Copy Example Format"):
-        st.session_state.news_text = example_text
-        st.rerun()
     
     if st.button("Analyze"):
         # Validate input
