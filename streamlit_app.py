@@ -6,6 +6,7 @@ from datetime import datetime
 import os
 import hashlib
 import re
+import numpy as np
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
@@ -15,7 +16,7 @@ if 'username' not in st.session_state:
 
 # Database functions
 def init_db():
-    conn = sqlite3.connect('fake_news.db')
+    conn = sqlite3.connect('fake_news.db', check_same_thread=False)
     c = conn.cursor()
     # Create users table
     c.execute('''
@@ -118,7 +119,25 @@ init_db()
 # Load the model
 @st.cache_resource
 def load_model():
-    return joblib.load('best_fake_news_model.pkl')
+    try:
+        model = joblib.load('best_fake_news_model.pkl')
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        return None
+
+def predict_fake_news(text, model):
+    try:
+        prediction = model.predict([text])[0]
+        # Convert numeric prediction to text
+        if isinstance(prediction, (int, np.integer)):
+            prediction = "FAKE" if prediction == 0 else "REAL"
+        probability = model.predict_proba([text])[0]
+        confidence = "High" if max(probability) > 0.7 else "Medium"
+        return prediction, confidence
+    except Exception as e:
+        st.error(f"Error during prediction: {str(e)}")
+        return None, None
 
 # Authentication UI
 def show_auth_ui():
@@ -183,29 +202,41 @@ def show_main_app():
     if st.button("Analyze"):
         if news_text:
             model = load_model()
-            prediction = model.predict([news_text])[0]
-            confidence = "High" if prediction == "FAKE" else "Medium"
-            
-            result_color = "#ff6b6b" if prediction == "FAKE" else "#51cf66"
-            st.markdown(f"""
-            <div style='padding: 20px; border-radius: 5px; background-color: {result_color}; color: white;'>
-                <h3>Prediction: {prediction}</h3>
-                <p>Confidence: {confidence}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Save detection to history
-            user_id = get_user_id(st.session_state.username)
-            save_detection(user_id, news_text, prediction, confidence)
+            if model is not None:
+                prediction, confidence = predict_fake_news(news_text, model)
+                if prediction is not None:
+                    result_color = "#ff6b6b" if prediction == "FAKE" else "#51cf66"
+                    st.markdown(f"""
+                    <div style='padding: 20px; border-radius: 5px; background-color: {result_color}; color: white;'>
+                        <h3>Prediction: {prediction}</h3>
+                        <p>Confidence: {confidence}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    try:
+                        # Save detection to history
+                        user_id = get_user_id(st.session_state.username)
+                        if user_id is not None:
+                            save_detection(user_id, news_text, prediction, confidence)
+                        else:
+                            st.error("Error: Could not find user ID")
+                    except Exception as e:
+                        st.error(f"Error saving detection: {str(e)}")
     
     # Show detection history
     st.subheader("Detection History")
-    user_id = get_user_id(st.session_state.username)
-    history = get_user_history(user_id)
-    if not history.empty:
-        st.dataframe(history)
-    else:
-        st.info("No detection history yet.")
+    try:
+        user_id = get_user_id(st.session_state.username)
+        if user_id is not None:
+            history = get_user_history(user_id)
+            if not history.empty:
+                st.dataframe(history)
+            else:
+                st.info("No detection history yet.")
+        else:
+            st.error("Error: Could not find user ID")
+    except Exception as e:
+        st.error(f"Error loading history: {str(e)}")
 
 # Main app flow
 if not st.session_state.authenticated:
