@@ -6,7 +6,7 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier
-import joblib
+import pickle
 import re
 import nltk
 from nltk.tokenize import word_tokenize
@@ -159,9 +159,10 @@ def main():
     plt.savefig('improved_confusion_matrix.png')
     plt.close()
 
-    # Save the model
+    # Save the model using pickle
     print("\nSaving the improved model...")
-    joblib.dump(pipeline, 'improved_fake_news_model.pkl')
+    with open('improved_fake_news_model.pkl', 'wb') as f:
+        pickle.dump(pipeline, f)
     print("Model saved as 'improved_fake_news_model.pkl'")
 
     # Feature importance analysis

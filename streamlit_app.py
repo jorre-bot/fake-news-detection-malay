@@ -1,5 +1,5 @@
 import streamlit as st
-import joblib
+import pickle
 import sqlite3
 import pandas as pd
 from datetime import datetime
@@ -9,6 +9,7 @@ import re
 import numpy as np
 import secrets
 import base64
+from sklearn.base import BaseEstimator, TransformerMixin
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
@@ -236,7 +237,8 @@ init_db()
 @st.cache_resource
 def load_model():
     try:
-        model = joblib.load('improved_fake_news_model.pkl')
+        with open('improved_fake_news_model.pkl', 'rb') as f:
+            model = pickle.load(f)
         return model
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
@@ -248,7 +250,7 @@ def predict_fake_news(text, model):
         prediction = model.predict([text])[0]
         probability = model.predict_proba([text])[0]
         
-        # Get feature extractor
+        # Get feature extractor from pipeline
         feature_extractor = model.named_steps['features'].transformer_list[1][1]
         features = feature_extractor.transform([text])[0]
         
