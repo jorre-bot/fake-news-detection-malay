@@ -268,9 +268,9 @@ def validate_news_text(text):
     words = text.strip().split()
     word_count = len(words)
     
-    # Check minimum word count (50 words)
-    if word_count < 50:
-        return False, f"News text must contain at least 50 words for accurate analysis. Current word count: {word_count}"
+    # Check minimum word count (20 words)
+    if word_count < 25:
+        return False, f"News text must contain at least 20 words for accurate analysis. Current word count: {word_count}"
     
     return True, ""
 
@@ -289,7 +289,7 @@ def show_main_app():
     ### 📝 News Text Requirements
     Please ensure your text meets these requirements:
     1. **Language**: Must be in Malay
-    2. **Minimum length**: 50 words (not just the title)
+    2. **Minimum length**: 25 words (not just the title)
     3. **Content**: Include both title and full news content
     """)
     
@@ -304,7 +304,7 @@ def show_main_app():
     
     news_text = st.text_area(
         "Enter news text to analyze:",
-        help="Enter your news content in Malay language (minimum 50 words).",
+        help="Enter your news content in Malay language (minimum 25 words).",
         height=300
     )
     

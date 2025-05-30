@@ -66,9 +66,9 @@
             <h1 class="text-center mb-4">Malay Fake News Detection</h1>
             <div class="form-group">
                 <label for="newsText" class="mb-2">Enter news text to analyze:</label>
-                <textarea class="form-control mb-3" id="newsText" rows="6" placeholder="Paste your news text here..." minlength="50"></textarea>
-                <div class="char-counter">Characters: <span id="charCount">0</span> (minimum 50 required)</div>
-                <div class="invalid-feedback">Please enter at least 50 characters of news text.</div>
+                <textarea class="form-control mb-3" id="newsText" rows="6" placeholder="Paste your news text here..." minlength="25"></textarea>
+                <div class="char-counter">Characters: <span id="charCount">0</span> (minimum 25 required)</div>
+                <div class="invalid-feedback">Please enter at least 20 characters of news text.</div>
                 
                 <div class="example-box mt-3">
                     <h6>Example News Format:</h6>
@@ -97,7 +97,7 @@
             const charCount = this.value.length;
             document.getElementById('charCount').textContent = charCount;
             
-            if (charCount < 50) {
+            if (charCount < 20) {
                 this.classList.add('is-invalid');
             } else {
                 this.classList.remove('is-invalid');
@@ -106,7 +106,7 @@
 
         function analyzeFakeNews() {
             const newsText = $('#newsText').val();
-            if (!newsText || newsText.length < 50) {
+            if (!newsText || newsText.length < 20) {
                 $('#newsText').addClass('is-invalid');
                 return;
             }
