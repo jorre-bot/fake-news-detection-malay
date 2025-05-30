@@ -253,17 +253,6 @@ def validate_news_text(text):
     if len(text.strip()) < 20:
         return False, "News text must be at least 20 characters long to be analyzed properly."
     
-    # Check if it starts with a location prefix (common in Malay news)
-    location_prefixes = ["MELAKA:", "KOTA BHARU:", "KUALA LUMPUR:", "JOHOR BAHRU:", "PUTRAJAYA:", "SHAH ALAM:", "IPOH:", "SEREMBAN:", "ALOR SETAR:", "GEORGE TOWN:"]
-    
-    # Convert text to uppercase for case-insensitive comparison
-    text_upper = text.strip().upper()
-    
-    # Check if text starts with location prefix
-    has_prefix = any(text_upper.startswith(prefix) for prefix in location_prefixes)
-    if not has_prefix:
-        return False, f"News text must start with a location prefix. Valid prefixes include: {', '.join(location_prefixes)}"
-    
     return True, ""
 
 def show_main_app():
@@ -278,23 +267,19 @@ def show_main_app():
     st.write("This tool uses machine learning to analyze and detect potential fake news in Malay language texts.")
     
     st.markdown("""
-    ### 📝 Required News Format
-    Your news text **must** follow this format:
-    """)
-    
-    example_text = """KUALA LUMPUR: Dalam satu makluman tular, sebuah universiti tempatan dikatakan menawarkan biasiswa penuh tanpa sebarang syarat kepada semua pelajar baharu."""
-    
-    st.code(example_text, language="text")
-    
-    st.markdown("""
-    ### ✅ Format Requirements:
-    1. **Must start** with a location prefix followed by colon (e.g., 'KOTA BHARU:', 'KUALA LUMPUR:', etc.)
+    ### 📝 News Text Requirements
+    Please ensure your text meets these requirements:
+    1. **Language**: Must be in Malay
     2. **Minimum length**: 20 characters
     """)
     
+    example_text = """Dalam satu makluman tular, sebuah universiti tempatan dikatakan menawarkan biasiswa penuh tanpa sebarang syarat kepada semua pelajar baharu."""
+    
+    st.code(example_text, language="text")
+    
     news_text = st.text_area(
         "Enter news text to analyze:",
-        help="Enter your news content following the format requirements above.",
+        help="Enter your news content in Malay language.",
         height=200
     )
     
