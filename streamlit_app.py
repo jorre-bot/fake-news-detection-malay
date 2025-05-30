@@ -246,40 +246,59 @@ def check_fake_news_indicators(text):
     """Check for obvious fake news indicators in the text"""
     fake_indicators = [
         # Source credibility indicators
-        "sumber tidak rasmi mendakwa",
-        "menurut sumber tertentu",
-        "maklumat ini diperoleh daripada sumber yang tidak mahu dikenali",
-        "pakar berkata",
-        "ramai pihak mendakwa",
-        "khabar angin mengatakan",
-        "dilaporkan bahawa",
+        "sumber tidak rasmi",
+        "sumber dalaman",
+        "pihak tertentu mendakwa",
+        "menurut laporan",
+        "memetik kenyataan",
+        "belum disahkan",
+        "hasil kajian pakar (tanpa nama)",
         
         # Viral/Social Media indicators
-        "berita ini telah tular di media sosial",
-        "berita ini masih belum disahkan",
-        "berita mengejutkan ini",
+        "viral di media sosial",
+        "tular",
+        "viral",
+        "heboh diperkatakan",
+        "menjadi bualan hangat",
+        "ramai netizen",
+        "dipercayai ramai",
+        
+        # Claim indicators
+        "dikatakan",
+        "kononnya",
+        "didakwa",
+        "dikhabarkan",
+        "dipercayai",
+        "terbukti secara saintifik (tanpa bukti sah)",
+        
+        # Expert/Authority claims
+        "pakar mendakwa",
+        "pakar mendapati",
+        "hasil kajian pakar",
+        
+        # Emotional/Sensational indicators
+        "berita mengejutkan",
         "pendedahan eksklusif",
-        "ramai netizen terkejut dengan",
-        "berita ini telah disebarkan oleh pelbagai pihak",
+        "fakta mengejutkan",
+        "berita panas",
+        "mengejutkan dunia",
+        "amat merisaukan",
+        "menimbulkan tanda tanya",
         
-        # Authority/Response indicators
-        "pihak berkuasa masih berdiam diri",
-        "orang ramai dinasihatkan supaya berhati-hati",
+        # Time/Urgency indicators
+        "dalam tempoh 24 jam",
+        "maklumat terkini",
+        "tidak pernah berlaku sebelum ini",
         
-        # Virus/Pandemic specific indicators
-        "virus baharu telah dikesan berasal dari serpihan meteor",
-        "virus tersebut dikatakan mampu merebak dengan pantas melalui udara",
-        "telah menular ke seluruh dunia dalam tempoh 24 jam sahaja",
-        "berpotensi menyebabkan pandemik yang lebih dahsyat daripada covid-19",
-        "virus dari meteor",
-        "virus baharu dari meteor",
-        "virus dari serpihan meteor",
-        "virus dari angkasa",
-        "virus luar angkasa",
-        "virus meteor",
-        "virus dari langit",
-        "virus baharu dari langit",
-        "virus asing dari meteor"
+        # Public reaction claims
+        "ramai pihak terkejut",
+        "orang ramai dinasihatkan",
+        "ramai yang percaya",
+        
+        # Unverified information indicators
+        "khabar angin",
+        "maklumat bocor",
+        "dilaporkan bahawa"
     ]
     
     text_lower = text.lower()
