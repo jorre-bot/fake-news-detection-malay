@@ -162,7 +162,7 @@ def main():
     # Save the model using pickle
     print("\nSaving the improved model...")
     with open('improved_fake_news_model.pkl', 'wb') as f:
-        pickle.dump(pipeline, f)
+        pickle.dump(pipeline, f, protocol=4)  # Using protocol version 4 for better compatibility
     print("Model saved as 'improved_fake_news_model.pkl'")
 
     # Feature importance analysis

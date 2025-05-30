@@ -237,8 +237,19 @@ init_db()
 @st.cache_resource
 def load_model():
     try:
-        with open('improved_fake_news_model.pkl', 'rb') as f:
+        model_path = 'improved_fake_news_model.pkl'
+        if not os.path.exists(model_path):
+            st.error(f"Model file not found: {model_path}")
+            return None
+            
+        with open(model_path, 'rb') as f:
             model = pickle.load(f)
+            
+        # Verify the model has the expected structure
+        if not hasattr(model, 'predict') or not hasattr(model, 'predict_proba'):
+            st.error("Invalid model format: missing required methods")
+            return None
+            
         return model
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
