@@ -3,7 +3,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, f1_score
-from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import LinearSVC
 from xgboost import XGBClassifier
@@ -18,6 +19,45 @@ import seaborn as sns
 print("Downloading required NLTK data...")
 nltk.download('punkt')
 
+# Define fake news indicator words
+FAKE_NEWS_INDICATORS = {
+    'tular',          # viral
+    'kononnya',       # allegedly
+    'dakwaan',        # claim
+    'didakwa',        # claimed
+    'dikatakan',      # said to be
+    'viral',          # viral
+    'konon',          # supposedly
+    'palsu',          # fake
+    'tidak rasmi',    # unofficial
+    'tidak sahih',    # unverified
+    'khabar angin',   # rumor
+    'desas-desus',    # gossip
+    'spekulasi',      # speculation
+    'dipersoalkan',   # questioned
+    'belum disahkan'  # unconfirmed
+}
+
+class FakeNewsIndicatorExtractor(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X):
+        features = np.zeros((len(X), len(FAKE_NEWS_INDICATORS) + 1))
+        
+        for idx, text in enumerate(X):
+            # Count fake news indicator words
+            word_count = 0
+            for indicator in FAKE_NEWS_INDICATORS:
+                if indicator in text.lower():
+                    word_count += 1
+                    features[idx, list(FAKE_NEWS_INDICATORS).index(indicator)] = 1
+            
+            # Add total count as a feature
+            features[idx, -1] = word_count
+        
+        return features
+
 def preprocess_text(text):
     if pd.isna(text):
         return ""
@@ -31,11 +71,35 @@ def preprocess_text(text):
     # Remove URLs
     text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
     
-    # Remove numbers and special characters but keep letters and spaces
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
+    # Remove email addresses
+    text = re.sub(r'\S+@\S+', '', text)
+    
+    # Remove numbers but keep letters and spaces
+    text = re.sub(r'\d+', '', text)
+    
+    # Remove punctuation but keep letters and spaces
+    text = re.sub(r'[^\w\s]', '', text)
     
     # Remove extra whitespace
     text = ' '.join(text.split())
+    
+    # Normalize common Malay variations
+    text = text.replace('x', 'tidak')  # Common abbreviation
+    text = text.replace('sy', 'saya')
+    text = text.replace('yg', 'yang')
+    text = text.replace('utk', 'untuk')
+    text = text.replace('dgn', 'dengan')
+    text = text.replace('pd', 'pada')
+    text = text.replace('dr', 'dari')
+    text = text.replace('dlm', 'dalam')
+    text = text.replace('bg', 'bagi')
+    text = text.replace('sgt', 'sangat')
+    text = text.replace('jgn', 'jangan')
+    text = text.replace('sdh', 'sudah')
+    text = text.replace('spy', 'supaya')
+    text = text.replace('kpd', 'kepada')
+    text = text.replace('krn', 'kerana')
+    text = text.replace('tdk', 'tidak')
     
     return text
 
@@ -105,8 +169,11 @@ def main():
     # Split the data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-    # Create TF-IDF vectorizer
-    tfidf = TfidfVectorizer(max_features=50000, ngram_range=(1, 2))
+    # Create feature union with TF-IDF and custom features
+    features = FeatureUnion([
+        ('tfidf', TfidfVectorizer(max_features=50000, ngram_range=(1, 2))),
+        ('fake_indicators', FakeNewsIndicatorExtractor())
+    ])
 
     # Initialize models
     models = {
@@ -118,6 +185,8 @@ def main():
 
     # Dictionary to store results
     results = {}
+    best_score = 0
+    best_pipeline = None
 
     # Train and evaluate each model
     print("\nTraining and evaluating models...")
@@ -125,7 +194,7 @@ def main():
         print(f"\nTraining {name}...")
         
         pipeline = Pipeline([
-            ('tfidf', tfidf),
+            ('features', features),
             ('classifier', model)
         ])
         
@@ -147,6 +216,14 @@ def main():
         
         # Plot confusion matrix
         plot_confusion_matrix(results[name]['confusion_matrix'], name, f'confusion_matrix_{name.lower().replace(" ", "_")}.png')
+        
+        # Save the best model
+        if results[name]['f1_score'] > best_score:
+            best_score = results[name]['f1_score']
+            best_pipeline = pipeline
+            print(f"New best model found: {name}")
+            with open('best_fake_news_model.pkl', 'wb') as f:
+                pickle.dump(pipeline, f)
 
     # Plot model comparison
     plot_model_comparison(results)
@@ -159,6 +236,9 @@ def main():
 
     # Save detailed results to a text file
     with open('model_comparison_results.txt', 'w') as f:
+        f.write("\nFake News Indicators Used:\n")
+        f.write("\n".join(f"- {word}" for word in sorted(FAKE_NEWS_INDICATORS)))
+        f.write("\n\nModel Results:\n")
         for name, result in results.items():
             f.write(f"\n{name} Results:\n")
             f.write(f"Accuracy: {result['accuracy']:.4f}\n")
