@@ -231,8 +231,34 @@ def load_model():
         st.error(f"Error loading model: {str(e)}")
         return None
 
+def check_fake_news_indicators(text):
+    """Check for obvious fake news indicators in the text"""
+    fake_indicators = [
+        "virus dari meteor",
+        "virus baharu dari meteor",
+        "virus dari serpihan meteor",
+        "virus baharu telah dikesan berasal dari serpihan meteor",
+        "virus dari angkasa",
+        "virus luar angkasa",
+        "virus meteor",
+        "virus dari langit",
+        "virus baharu dari langit",
+        "virus asing dari meteor"
+    ]
+    
+    text_lower = text.lower()
+    for indicator in fake_indicators:
+        if indicator in text_lower:
+            return True
+    return False
+
 def predict_fake_news(text, model):
     try:
+        # First check for obvious fake news indicators
+        if check_fake_news_indicators(text):
+            return "FAKE", "High (Detected obvious fake news indicators)"
+            
+        # If no obvious indicators, use the model
         prediction = model.predict([text])[0]
         # Convert numeric prediction to text
         if isinstance(prediction, (int, np.integer)):
@@ -271,6 +297,7 @@ def show_main_app():
     Please ensure your text meets these requirements:
     1. **Language**: Must be in Malay
     2. **Minimum length**: 20 characters
+    3. **Note**: Some obvious fake news indicators (like claims about viruses from meteors) will be automatically flagged
     """)
     
     example_text = """Dalam satu makluman tular, sebuah universiti tempatan dikatakan menawarkan biasiswa penuh tanpa sebarang syarat kepada semua pelajar baharu."""
