@@ -242,89 +242,17 @@ def load_model():
         st.error(f"Error loading model: {str(e)}")
         return None
 
-def check_fake_news_indicators(text):
-    """Check for obvious fake news indicators in the text"""
-    fake_indicators = [
-        # Source credibility indicators
-        "sumber tidak rasmi",
-        "sumber dalaman",
-        "pihak tertentu mendakwa",
-        "menurut laporan",
-        "memetik kenyataan",
-        "belum disahkan",
-        "hasil kajian pakar (tanpa nama)",
-        
-        # Viral/Social Media indicators
-        "viral di media sosial",
-        "tular",
-        "viral",
-        "heboh diperkatakan",
-        "menjadi bualan hangat",
-        "ramai netizen",
-        "dipercayai ramai",
-        
-        # Claim indicators
-        "dikatakan",
-        "kononnya",
-        "didakwa",
-        "dikhabarkan",
-        "dipercayai",
-        "terbukti secara saintifik (tanpa bukti sah)",
-        
-        # Expert/Authority claims
-        "pakar mendakwa",
-        "pakar mendapati",
-        "hasil kajian pakar",
-        
-        # Emotional/Sensational indicators
-        "berita mengejutkan",
-        "pendedahan eksklusif",
-        "fakta mengejutkan",
-        "berita panas",
-        "mengejutkan dunia",
-        "amat merisaukan",
-        "menimbulkan tanda tanya",
-        
-        # Time/Urgency indicators
-        "dalam tempoh 24 jam",
-        "maklumat terkini",
-        "tidak pernah berlaku sebelum ini",
-        
-        # Public reaction claims
-        "ramai pihak terkejut",
-        "orang ramai dinasihatkan",
-        "ramai yang percaya",
-        
-        # Unverified information indicators
-        "khabar angin",
-        "maklumat bocor",
-        "dilaporkan bahawa"
-    ]
-    
-    text_lower = text.lower()
-    matched_indicators = []
-    
-    for indicator in fake_indicators:
-        if indicator in text_lower:
-            matched_indicators.append(indicator)
-    
-    if matched_indicators:
-        return True, f"Detected fake news indicators: {', '.join(matched_indicators)}"
-    return False, ""
-
 def predict_fake_news(text, model):
     try:
-        # First check for obvious fake news indicators
-        is_fake, indicators = check_fake_news_indicators(text)
-        if is_fake:
-            return "FAKE", f"High (Automatic Detection: {indicators})"
-            
-        # If no obvious indicators, use the model
+        # Use ML model for prediction
         prediction = model.predict([text])[0]
+        probability = model.predict_proba([text])[0]
+        
         # Convert numeric prediction to text
         if isinstance(prediction, (int, np.integer)):
             prediction = "FAKE" if prediction == 0 else "REAL"
-        probability = model.predict_proba([text])[0]
+            
+        # Determine confidence based on probability
         confidence = "High" if max(probability) > 0.7 else "Medium"
         return prediction, confidence
     except Exception as e:
