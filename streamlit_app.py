@@ -328,11 +328,6 @@ def show_main_app():
     Please ensure your text meets these requirements:
     1. **Language**: Must be in Malay
     2. **Minimum length**: 20 characters
-    3. **Note**: The system will automatically flag content with:
-       - Unverified sources ("Sumber tidak rasmi mendakwa...")
-       - Viral claims without verification
-       - Claims about extraordinary events without official confirmation
-       - Sensational health/pandemic claims
     """)
     
     example_text = """Dalam satu makluman tular, sebuah universiti tempatan dikatakan menawarkan biasiswa penuh tanpa sebarang syarat kepada semua pelajar baharu."""
