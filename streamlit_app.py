@@ -1,5 +1,5 @@
 import streamlit as st
-import pickle
+import joblib
 import sqlite3
 import pandas as pd
 from datetime import datetime
@@ -9,7 +9,6 @@ import re
 import numpy as np
 import secrets
 import base64
-from sklearn.base import BaseEstimator, TransformerMixin
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
@@ -237,19 +236,7 @@ init_db()
 @st.cache_resource
 def load_model():
     try:
-        model_path = 'improved_fake_news_model.pkl'
-        if not os.path.exists(model_path):
-            st.error(f"Model file not found: {model_path}")
-            return None
-            
-        with open(model_path, 'rb') as f:
-            model = pickle.load(f)
-            
-        # Verify the model has the expected structure
-        if not hasattr(model, 'predict') or not hasattr(model, 'predict_proba'):
-            st.error("Invalid model format: missing required methods")
-            return None
-            
+        model = joblib.load('best_fake_news_model.pkl')
         return model
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
@@ -261,36 +248,16 @@ def predict_fake_news(text, model):
         prediction = model.predict([text])[0]
         probability = model.predict_proba([text])[0]
         
-        # Get feature extractor from pipeline
-        feature_extractor = model.named_steps['features'].transformer_list[1][1]
-        features = feature_extractor.transform([text])[0]
-        
         # Convert numeric prediction to text
         if isinstance(prediction, (int, np.integer)):
             prediction = "FAKE" if prediction == 0 else "REAL"
             
         # Determine confidence based on probability
         confidence = "High" if max(probability) > 0.7 else "Medium"
-        
-        # Generate explanation
-        explanation = []
-        if features[0] > 0:  # viral keywords
-            explanation.append(f"📢 Contains {int(features[0])} viral-related keywords")
-        if features[1] > 0:  # credible sources
-            explanation.append(f"🏛️ Mentions {int(features[1])} credible sources")
-        if features[2] > 0:  # fake patterns
-            explanation.append(f"⚠️ Contains {int(features[2])} suspicious patterns")
-        if features[3] > 0:  # denial statements
-            explanation.append("🚫 Contains denial statements")
-        if features[4] > 0:  # verification statements
-            explanation.append("✅ Contains verification statements")
-        if features[5] > 0.1:  # uppercase ratio
-            explanation.append("❗ Contains unusual capitalization")
-            
-        return prediction, confidence, explanation
+        return prediction, confidence
     except Exception as e:
         st.error(f"Error during prediction: {str(e)}")
-        return None, None, None
+        return None, None
 
 def validate_news_text(text):
     """Validate the input news text"""
@@ -350,26 +317,20 @@ def show_main_app():
         else:
             model = load_model()
             if model is not None:
-                prediction, confidence, explanation = predict_fake_news(news_text, model)
+                prediction, confidence = predict_fake_news(news_text, model)
                 if prediction is not None:
                     result_color = "#ff6b6b" if prediction == "FAKE" else "#51cf66"
                     st.markdown(f"""
                     <div style='padding: 20px; border-radius: 5px; background-color: {result_color}; color: white;'>
                         <h3>Prediction: {prediction}</h3>
-                        <p>Confidence: {confidence}</p>
                     </div>
                     """, unsafe_allow_html=True)
-                    
-                    if explanation:
-                        st.markdown("### Analysis Details")
-                        for detail in explanation:
-                            st.markdown(f"- {detail}")
                     
                     try:
                         # Save detection to history
                         user_id = get_user_id(st.session_state.username)
                         if user_id is not None:
-                            save_detection(user_id, news_text, prediction, confidence)
+                            save_detection(user_id, news_text, prediction, "High" if prediction == "FAKE" else confidence)
                         else:
                             st.error("Error: Could not find user ID")
                     except Exception as e:
