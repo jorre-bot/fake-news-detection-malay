@@ -355,7 +355,6 @@ def show_main_app():
                     st.markdown(f"""
                     <div style='padding: 20px; border-radius: 5px; background-color: {result_color}; color: white;'>
                         <h3>Prediction: {prediction}</h3>
-                        <p>Confidence: {confidence}</p>
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -363,7 +362,7 @@ def show_main_app():
                         # Save detection to history
                         user_id = get_user_id(st.session_state.username)
                         if user_id is not None:
-                            save_detection(user_id, news_text, prediction, confidence)
+                            save_detection(user_id, news_text, prediction, "High" if prediction == "FAKE" else confidence)
                         else:
                             st.error("Error: Could not find user ID")
                     except Exception as e:
