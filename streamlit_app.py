@@ -9,12 +9,44 @@ import re
 import numpy as np
 import secrets
 import base64
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Set up logging configuration
+def setup_logging():
+    # Create logs directory if it doesn't exist
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    
+    # Configure logging
+    log_file = os.path.join('logs', 'app.log')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            RotatingFileHandler(
+                log_file, 
+                maxBytes=1024*1024,  # 1MB per file
+                backupCount=5  # Keep 5 backup files
+            ),
+            logging.StreamHandler()
+        ]
+    )
+    return logging.getLogger(__name__)
+
+# Initialize logger
+logger = setup_logging()
+
+# Log application startup
+logger.info("Application started")
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
+    logger.info("Initialized authentication state")
 if 'username' not in st.session_state:
     st.session_state.username = None
+    logger.info("Initialized username state")
 if 'login_attempts' not in st.session_state:
     st.session_state.login_attempts = {}
 if 'last_activity' not in st.session_state:
@@ -99,32 +131,43 @@ def check_session_timeout():
 
 # Database functions
 def init_db():
-    conn = sqlite3.connect('fake_news.db', check_same_thread=False)
-    c = conn.cursor()
-    # Create users table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users
-        (id INTEGER PRIMARY KEY AUTOINCREMENT,
-         username TEXT UNIQUE NOT NULL,
-         email TEXT UNIQUE NOT NULL,
-         password TEXT NOT NULL)
-    ''')
-    # Create detections table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS detections
-        (id INTEGER PRIMARY KEY AUTOINCREMENT,
-         user_id INTEGER,
-         news_text TEXT NOT NULL,
-         prediction TEXT NOT NULL,
-         confidence TEXT NOT NULL,
-         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-         FOREIGN KEY (user_id) REFERENCES users (id))
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('fake_news.db', check_same_thread=False)
+        c = conn.cursor()
+        # Create users table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS users
+            (id INTEGER PRIMARY KEY AUTOINCREMENT,
+             username TEXT UNIQUE NOT NULL,
+             email TEXT UNIQUE NOT NULL,
+             password TEXT NOT NULL)
+        ''')
+        # Create detections table
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS detections
+            (id INTEGER PRIMARY KEY AUTOINCREMENT,
+             user_id INTEGER,
+             news_text TEXT NOT NULL,
+             prediction TEXT NOT NULL,
+             confidence TEXT NOT NULL,
+             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+             FOREIGN KEY (user_id) REFERENCES users (id))
+        ''')
+        conn.commit()
+        conn.close()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {str(e)}")
+        raise
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    try:
+        hashed = hashlib.sha256(password.encode()).hexdigest()
+        logger.debug("Password hashed successfully")
+        return hashed
+    except Exception as e:
+        logger.error(f"Password hashing failed: {str(e)}")
+        raise
 
 def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -142,12 +185,14 @@ def validate_password(password):
     return True, "Password is valid"
 
 def register_user(username, email, password):
-    """Register user with enhanced security"""
+    logger.info(f"Attempting to register user: {username}")
     if not validate_email(email):
+        logger.warning(f"Invalid email format attempted: {email}")
         return False, "Invalid email format"
     
     valid_password, msg = validate_password(password)
     if not valid_password:
+        logger.warning(f"Invalid password format for user {username}: {msg}")
         return False, msg
     
     # Sanitize inputs
@@ -165,35 +210,35 @@ def register_user(username, email, password):
                  (username, email, hashed_password))
         conn.commit()
         conn.close()
+        logger.info(f"User registered successfully: {username}")
         return True, "Registration successful"
     except sqlite3.IntegrityError:
+        logger.warning(f"Registration failed - username or email exists: {username}")
         return False, "Username or email already exists"
     except Exception as e:
-        return False, "An error occurred during registration"
+        logger.error(f"Registration error for {username}: {str(e)}")
+        return False, f"Error: {str(e)}"
 
 def login_user(username, password):
-    """Login user with enhanced security"""
-    username = sanitize_input(username)
-    
-    if not check_rate_limit(username):
-        remaining_time = LOCKOUT_TIME
-        return False, f"Too many login attempts. Please try again in {remaining_time} seconds."
-    
+    logger.info(f"Login attempt for user: {username}")
     try:
         conn = sqlite3.connect('fake_news.db')
         c = conn.cursor()
-        c.execute('SELECT id, password FROM users WHERE username = ?', (username,))
+        hashed_password = hash_password(password)
+        c.execute('SELECT id FROM users WHERE username = ? AND password = ?',
+                 (username, hashed_password))
         result = c.fetchone()
         conn.close()
         
-        if result and verify_password(password, result[1]):
-            update_login_attempts(username, True)
-            return True, "Login successful"
-        
-        update_login_attempts(username, False)
-        return False, "Invalid username or password"
+        if result:
+            logger.info(f"Login successful for user: {username}")
+            return True
+        else:
+            logger.warning(f"Login failed for user: {username}")
+            return False
     except Exception as e:
-        return False, "An error occurred during login"
+        logger.error(f"Login error for {username}: {str(e)}")
+        return False
 
 def save_detection(user_id, news_text, prediction, confidence):
     conn = sqlite3.connect('fake_news.db')
@@ -218,9 +263,6 @@ def get_user_history(user_id):
     conn.close()
     return df
 
-# Initialize database
-init_db()
-
 # Load the model
 @st.cache_resource
 def load_model():
@@ -233,15 +275,16 @@ def load_model():
 
 def predict_fake_news(text, model):
     try:
+        logger.info("Starting news prediction")
         prediction = model.predict([text])[0]
-        # Convert numeric prediction to text
         if isinstance(prediction, (int, np.integer)):
             prediction = "FAKE" if prediction == 0 else "REAL"
         probability = model.predict_proba([text])[0]
         confidence = "High" if max(probability) > 0.7 else "Medium"
+        logger.info(f"Prediction complete: {prediction} with {confidence} confidence")
         return prediction, confidence
     except Exception as e:
-        st.error(f"Error during prediction: {str(e)}")
+        logger.error(f"Prediction error: {str(e)}")
         return None, None
 
 def validate_news_text(text):
@@ -357,14 +400,15 @@ def show_auth_ui():
             submit = st.form_submit_button("Login")
             
             if submit:
-                success, message = login_user(username, password)
-                if success:
+                if login_user(username, password):
                     st.session_state.authenticated = True
                     st.session_state.username = username
-                    st.success(message)
+                    logger.info(f"User logged in successfully: {username}")
+                    st.success("Login successful!")
                     st.rerun()
                 else:
-                    st.error(message)
+                    logger.warning(f"Failed login attempt for user: {username}")
+                    st.error("Invalid username or password")
     
     with tab2:
         with st.form("register_form"):
@@ -376,8 +420,10 @@ def show_auth_ui():
             if submit:
                 success, message = register_user(new_username, new_email, new_password)
                 if success:
+                    logger.info(f"New user registered: {new_username}")
                     st.success(message)
                 else:
+                    logger.warning(f"Registration failed for {new_username}: {message}")
                     st.error(message)
 
 # Main app flow
