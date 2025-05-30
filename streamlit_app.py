@@ -147,9 +147,6 @@ def validate_password(password):
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
         return False, "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)"
     
-    if re.search(r'(.)\1{2,}', password):
-        return False, "Password cannot contain repeated characters more than twice in a row"
-    
     if any(common in password.lower() for common in ['password', '123456', 'qwerty', 'admin']):
         return False, "Password cannot contain common words like 'password', '123456', 'qwerty', 'admin'"
     
@@ -428,16 +425,6 @@ def show_auth_ui():
     
     with tab2:
         with st.form("register_form"):
-            st.markdown("""
-            ### Password Requirements:
-            - At least 12 characters long
-            - Must contain uppercase letter (A-Z)
-            - Must contain lowercase letter (a-z)
-            - Must contain number (0-9)
-            - Must contain special character (!@#$%^&*(),.?":{}|<>)
-            - Cannot have same character repeated more than twice
-            - Cannot contain common words (password, 123456, etc.)
-            """)
             new_username = st.text_input("Username")
             new_email = st.text_input("Email")
             new_password = st.text_input("Password", type="password")
@@ -449,6 +436,15 @@ def show_auth_ui():
                     st.success(message)
                 else:
                     st.error(message)
+                    st.markdown("""
+                    ### Password Requirements:
+                    - At least 12 characters long
+                    - Must contain uppercase letter (A-Z)
+                    - Must contain lowercase letter (a-z)
+                    - Must contain number (0-9)
+                    - Must contain special character (!@#$%^&*(),.?":{}|<>)
+                    - Cannot contain common words (password, 123456, etc.)
+                    """)
 
 # Main app flow
 if not st.session_state.authenticated:
