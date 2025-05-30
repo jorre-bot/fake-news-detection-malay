@@ -9,6 +9,46 @@ import re
 import numpy as np
 import secrets
 import base64
+from sklearn.base import BaseEstimator, TransformerMixin
+
+# Define fake news indicator words
+FAKE_NEWS_INDICATORS = {
+    'tular',          # viral
+    'kononnya',       # allegedly
+    'dakwaan',        # claim
+    'didakwa',        # claimed
+    'dikatakan',      # said to be
+    'viral',          # viral
+    'konon',          # supposedly
+    'palsu',          # fake
+    'tidak rasmi',    # unofficial
+    'tidak sahih',    # unverified
+    'khabar angin',   # rumor
+    'desas-desus',    # gossip
+    'spekulasi',      # speculation
+    'dipersoalkan',   # questioned
+    'belum disahkan'  # unconfirmed
+}
+
+class FakeNewsIndicatorExtractor(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    
+    def transform(self, X):
+        features = np.zeros((len(X), len(FAKE_NEWS_INDICATORS) + 1))
+        
+        for idx, text in enumerate(X):
+            # Count fake news indicator words
+            word_count = 0
+            for indicator in FAKE_NEWS_INDICATORS:
+                if indicator in text.lower():
+                    word_count += 1
+                    features[idx, list(FAKE_NEWS_INDICATORS).index(indicator)] = 1
+            
+            # Add total count as a feature
+            features[idx, -1] = word_count
+        
+        return features
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
