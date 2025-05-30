@@ -234,10 +234,35 @@ def load_model():
 def check_fake_news_indicators(text):
     """Check for obvious fake news indicators in the text"""
     fake_indicators = [
+        # Source credibility indicators
+        "sumber tidak rasmi mendakwa",
+        "menurut sumber tertentu",
+        "maklumat ini diperoleh daripada sumber yang tidak mahu dikenali",
+        "pakar berkata",
+        "ramai pihak mendakwa",
+        "khabar angin mengatakan",
+        "dilaporkan bahawa",
+        
+        # Viral/Social Media indicators
+        "berita ini telah tular di media sosial",
+        "berita ini masih belum disahkan",
+        "berita mengejutkan ini",
+        "pendedahan eksklusif",
+        "ramai netizen terkejut dengan",
+        "berita ini telah disebarkan oleh pelbagai pihak",
+        
+        # Authority/Response indicators
+        "pihak berkuasa masih berdiam diri",
+        "orang ramai dinasihatkan supaya berhati-hati",
+        
+        # Virus/Pandemic specific indicators
+        "virus baharu telah dikesan berasal dari serpihan meteor",
+        "virus tersebut dikatakan mampu merebak dengan pantas melalui udara",
+        "telah menular ke seluruh dunia dalam tempoh 24 jam sahaja",
+        "berpotensi menyebabkan pandemik yang lebih dahsyat daripada covid-19",
         "virus dari meteor",
         "virus baharu dari meteor",
         "virus dari serpihan meteor",
-        "virus baharu telah dikesan berasal dari serpihan meteor",
         "virus dari angkasa",
         "virus luar angkasa",
         "virus meteor",
@@ -247,16 +272,22 @@ def check_fake_news_indicators(text):
     ]
     
     text_lower = text.lower()
+    matched_indicators = []
+    
     for indicator in fake_indicators:
         if indicator in text_lower:
-            return True
-    return False
+            matched_indicators.append(indicator)
+    
+    if matched_indicators:
+        return True, f"Detected fake news indicators: {', '.join(matched_indicators)}"
+    return False, ""
 
 def predict_fake_news(text, model):
     try:
         # First check for obvious fake news indicators
-        if check_fake_news_indicators(text):
-            return "FAKE", "High (Detected obvious fake news indicators)"
+        is_fake, indicators = check_fake_news_indicators(text)
+        if is_fake:
+            return "FAKE", f"High (Automatic Detection: {indicators})"
             
         # If no obvious indicators, use the model
         prediction = model.predict([text])[0]
@@ -297,7 +328,11 @@ def show_main_app():
     Please ensure your text meets these requirements:
     1. **Language**: Must be in Malay
     2. **Minimum length**: 20 characters
-    3. **Note**: Some obvious fake news indicators (like claims about viruses from meteors) will be automatically flagged
+    3. **Note**: The system will automatically flag content with:
+       - Unverified sources ("Sumber tidak rasmi mendakwa...")
+       - Viral claims without verification
+       - Claims about extraordinary events without official confirmation
+       - Sensational health/pandemic claims
     """)
     
     example_text = """Dalam satu makluman tular, sebuah universiti tempatan dikatakan menawarkan biasiswa penuh tanpa sebarang syarat kepada semua pelajar baharu."""
