@@ -264,9 +264,13 @@ def validate_news_text(text):
     if not text or len(text.strip()) == 0:
         return False, "Please enter some text to analyze."
     
-    # Check minimum length (20 characters)
-    if len(text.strip()) < 20:
-        return False, "News text must be at least 20 characters long to be analyzed properly."
+    # Count words (split by whitespace)
+    words = text.strip().split()
+    word_count = len(words)
+    
+    # Check minimum word count (50 words)
+    if word_count < 50:
+        return False, f"News text must contain at least 50 words for accurate analysis. Current word count: {word_count}"
     
     return True, ""
 
@@ -285,7 +289,8 @@ def show_main_app():
     ### 📝 News Text Requirements
     Please ensure your text meets these requirements:
     1. **Language**: Must be in Malay
-    2. **Minimum length**: 20 characters
+    2. **Minimum length**: 50 words (not just the title)
+    3. **Content**: Include both title and full news content
     """)
     
     st.markdown("""
@@ -293,14 +298,14 @@ def show_main_app():
     Below is an example of how to format your news text:
     """)
     
-    example_text = """Dalam satu makluman tular, sebuah universiti tempatan dikatakan menawarkan biasiswa penuh tanpa sebarang syarat kepada semua pelajar baharu."""
+    example_text = """KOTA BHARU: Jabatan Pendidikan Negeri Kelantan mengumumkan penutupan sementara semua sekolah di daerah Kota Bharu bermula esok susulan peningkatan mendadak kes Covid-19 di kawasan tersebut. Pengarah Pendidikan Negeri, Dato' Ahmad bin Ibrahim berkata keputusan ini dibuat selepas berbincang dengan Jabatan Kesihatan Negeri dan pihak berkuasa tempatan. Menurut beliau, sebanyak 15 buah sekolah telah melaporkan kes positif dalam tempoh seminggu lepas. "Penutupan ini akan berlangsung selama dua minggu untuk membolehkan kerja-kerja sanitasi dijalankan secara menyeluruh. Pembelajaran akan diteruskan secara dalam talian menggunakan platform Google Classroom dan Microsoft Teams," katanya dalam satu kenyataan media hari ini. Beliau menambah bahawa pemantauan rapi akan dilakukan dan keputusan untuk membuka semula sekolah akan dibuat berdasarkan penilaian risiko oleh pihak berkuasa kesihatan."""
     
     st.code(example_text, language="text")
     
     news_text = st.text_area(
         "Enter news text to analyze:",
-        help="Enter your news content in Malay language.",
-        height=200
+        help="Enter your news content in Malay language (minimum 50 words).",
+        height=300
     )
     
     if st.button("Analyze"):
