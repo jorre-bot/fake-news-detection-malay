@@ -131,14 +131,28 @@ def validate_email(email):
     return re.match(pattern, email) is not None
 
 def validate_password(password):
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters long"
+    """Validate password with strong requirements"""
+    if len(password) < 12:
+        return False, "Password must be at least 12 characters long"
+    
     if not re.search(r'[A-Z]', password):
-        return False, "Password must contain at least one uppercase letter"
+        return False, "Password must contain at least one uppercase letter (A-Z)"
+    
     if not re.search(r'[a-z]', password):
-        return False, "Password must contain at least one lowercase letter"
+        return False, "Password must contain at least one lowercase letter (a-z)"
+    
     if not re.search(r'\d', password):
-        return False, "Password must contain at least one number"
+        return False, "Password must contain at least one number (0-9)"
+    
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)"
+    
+    if re.search(r'(.)\1{2,}', password):
+        return False, "Password cannot contain repeated characters more than twice in a row"
+    
+    if any(common in password.lower() for common in ['password', '123456', 'qwerty', 'admin']):
+        return False, "Password cannot contain common words like 'password', '123456', 'qwerty', 'admin'"
+    
     return True, "Password is valid"
 
 def register_user(username, email, password):
@@ -414,6 +428,16 @@ def show_auth_ui():
     
     with tab2:
         with st.form("register_form"):
+            st.markdown("""
+            ### Password Requirements:
+            - At least 12 characters long
+            - Must contain uppercase letter (A-Z)
+            - Must contain lowercase letter (a-z)
+            - Must contain number (0-9)
+            - Must contain special character (!@#$%^&*(),.?":{}|<>)
+            - Cannot have same character repeated more than twice
+            - Cannot contain common words (password, 123456, etc.)
+            """)
             new_username = st.text_input("Username")
             new_email = st.text_input("Email")
             new_password = st.text_input("Password", type="password")
