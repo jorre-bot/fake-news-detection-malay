@@ -330,6 +330,11 @@ def show_main_app():
     2. **Minimum length**: 20 characters
     """)
     
+    st.markdown("""
+    ### 📰 Example News Text:
+    Below is an example of how to format your news text:
+    """)
+    
     example_text = """Dalam satu makluman tular, sebuah universiti tempatan dikatakan menawarkan biasiswa penuh tanpa sebarang syarat kepada semua pelajar baharu."""
     
     st.code(example_text, language="text")
