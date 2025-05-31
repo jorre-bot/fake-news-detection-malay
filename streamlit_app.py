@@ -1,12 +1,10 @@
 import streamlit as st
-import joblib
 import sqlite3
 import pandas as pd
 from datetime import datetime
 import os
 import hashlib
 import re
-import numpy as np
 import secrets
 import base64
 
@@ -123,9 +121,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
-
 def validate_email(email):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
@@ -232,32 +227,25 @@ def get_user_history(user_id):
 # Initialize database
 init_db()
 
-# Load the model
-@st.cache_resource
-def load_model():
-    try:
-        model = joblib.load('best_fake_news_model.pkl')
-        return model
-    except Exception as e:
-        st.error(f"Error loading model: {str(e)}")
-        return None
-
-def predict_fake_news(text, model):
-    try:
-        # Use ML model for prediction
-        prediction = model.predict([text])[0]
-        probability = model.predict_proba([text])[0]
-        
-        # Convert numeric prediction to text
-        if isinstance(prediction, (int, np.integer)):
-            prediction = "FAKE" if prediction == 0 else "REAL"
-            
-        # Determine confidence based on probability
-        confidence = "High" if max(probability) > 0.7 else "Medium"
-        return prediction, confidence
-    except Exception as e:
-        st.error(f"Error during prediction: {str(e)}")
-        return None, None
+def predict_fake_news(text):
+    """Simple text-based fake news detection"""
+    # List of keywords that might indicate fake news
+    fake_indicators = [
+        'viral', 'kononnya', 'didakwa', 'tidak rasmi', 'sumber tidak rasmi',
+        'dikatakan', 'tular', 'dakwaan', 'khabar angin'
+    ]
+    
+    # Convert text to lowercase for case-insensitive matching
+    text_lower = text.lower()
+    
+    # Count how many fake news indicators are present
+    indicator_count = sum(1 for indicator in fake_indicators if indicator in text_lower)
+    
+    # Make prediction based on indicators
+    if indicator_count >= 2:
+        return "FAKE", "High" if indicator_count > 3 else "Medium"
+    else:
+        return "REAL", "Medium"
 
 def validate_news_text(text):
     """Validate the input news text"""
@@ -283,7 +271,7 @@ def show_main_app():
         st.session_state.username = None
         st.rerun()
     
-    st.write("This tool uses machine learning to analyze and detect potential fake news in Malay language texts.")
+    st.write("This tool uses text analysis to detect potential fake news in Malay language texts.")
     
     st.markdown("""
     ### 📝 News Text Requirements
@@ -315,26 +303,24 @@ def show_main_app():
             st.error(f"❌ {error_message}")
             st.info("👆 Please check the example format above and try again.")
         else:
-            model = load_model()
-            if model is not None:
-                prediction, confidence = predict_fake_news(news_text, model)
-                if prediction is not None:
-                    result_color = "#ff6b6b" if prediction == "FAKE" else "#51cf66"
-                    st.markdown(f"""
-                    <div style='padding: 20px; border-radius: 5px; background-color: {result_color}; color: white;'>
-                        <h3>Prediction: {prediction}</h3>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    try:
-                        # Save detection to history
-                        user_id = get_user_id(st.session_state.username)
-                        if user_id is not None:
-                            save_detection(user_id, news_text, prediction, "High" if prediction == "FAKE" else confidence)
-                        else:
-                            st.error("Error: Could not find user ID")
-                    except Exception as e:
-                        st.error(f"Error saving detection: {str(e)}")
+            prediction, confidence = predict_fake_news(news_text)
+            result_color = "#ff6b6b" if prediction == "FAKE" else "#51cf66"
+            st.markdown(f"""
+            <div style='padding: 20px; border-radius: 5px; background-color: {result_color}; color: white;'>
+                <h3>Prediction: {prediction}</h3>
+                <p>Confidence: {confidence}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            try:
+                # Save detection to history
+                user_id = get_user_id(st.session_state.username)
+                if user_id is not None:
+                    save_detection(user_id, news_text, prediction, confidence)
+                else:
+                    st.error("Error: Could not find user ID")
+            except Exception as e:
+                st.error(f"Error saving detection: {str(e)}")
     
     # Show detection history
     st.subheader("Detection History")
