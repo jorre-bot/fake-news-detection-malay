@@ -9,7 +9,6 @@ import re
 import numpy as np
 import secrets
 import base64
-from utils import FakeNewsIndicatorExtractor
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
