@@ -268,9 +268,9 @@ def validate_news_text(text):
     words = text.strip().split()
     word_count = len(words)
     
-    # Check minimum word count (20 words)
+    # Check minimum word count (25 words)
     if word_count < 25:
-        return False, f"News text must contain at least 20 words for accurate analysis. Current word count: {word_count}"
+        return False, f"News text must contain at least 25 words for accurate analysis. Current word count: {word_count}"
     
     return True, ""
 
