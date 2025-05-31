@@ -1,23 +1,4 @@
 
-Fake News Indicators Used:
-- belum disahkan
-- dakwaan
-- desas-desus
-- didakwa
-- dikatakan
-- dipersoalkan
-- khabar angin
-- konon
-- kononnya
-- palsu
-- spekulasi
-- tidak rasmi
-- tidak sahih
-- tular
-- viral
-
-Model Results:
-
 Random Forest Results:
 Accuracy: 1.0000
 F1 Score: 1.0000
