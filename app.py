@@ -127,13 +127,45 @@ def predict():
     try:
         # Get the news text from the request
         news_text = request.form['news_text']
-        
-        # Make prediction
-        prediction = model.predict([news_text])[0]
-        
-        # Convert prediction to human-readable format
-        result = "FAKE" if prediction == 0 else "REAL"
-        
+
+        # List of keywords that might indicate fake news
+        fake_indicators = [
+            'viral', 'kononnya', 'didakwa', 'tidak rasmi', 'sumber tidak rasmi',
+            'dikatakan', 'tular', 'dakwaan', 'khabar angin',
+            'palsu', 'fitnah', 'hoax', 'berita palsu', 'maklumat palsu',
+            'penipuan', 'tidak benar', 'tidak sahih', 'tidak berasas',
+            'sebaran palsu', 'berita tidak benar', 'berita tidak sahih',
+            'berita tidak rasmi', 'gosip', 'cerita palsu', 'cerita rekaan',
+            'sensasional', 'panik', 'menipu', 'tipu', 'bukan rasmi',
+            'belum disahkan', 'belum rasmi', 'belum ada pengesahan',
+            'belum dapat dipastikan', 'belum ada kenyataan rasmi',
+            'belum ada pengumuman rasmi', 'berita tular', 'berita fitnah',
+            'berita rekaan', 'berita bohong', 'berita tipu', 'berita panik',
+            'berita sensasi', 'berita tidak tepat', 'berita tidak betul',
+            'berita tidak lengkap', 'berita tidak logik', 'berita mengelirukan',
+            'maklumat tidak benar', 'maklumat tidak sahih', 'maklumat tidak tepat',
+            'maklumat tidak rasmi', 'maklumat tidak logik', 'maklumat mengelirukan',
+            'mesej palsu', 'mesej tular', 'mesej tidak benar', 'mesej tidak sahih',
+            'mesej tidak rasmi', 'mesej tidak tepat', 'mesej tidak logik',
+            'mesej mengelirukan', 'khabar tidak benar', 'khabar tidak sahih',
+            'khabar tidak rasmi', 'khabar tidak tepat', 'khabar tidak logik',
+            'khabar mengelirukan', 'cerita tidak benar', 'cerita tidak sahih',
+            'cerita tidak rasmi', 'cerita tidak tepat', 'cerita tidak logik',
+            'cerita mengelirukan', 'amaran palsu', 'amaran tular', 'amaran tidak benar',
+            'amaran tidak sahih', 'amaran tidak rasmi', 'amaran tidak tepat',
+            'amaran tidak logik', 'amaran mengelirukan'
+        ]
+        # Convert text to lowercase for case-insensitive matching
+        text_lower = news_text.lower()
+        # If any fake indicator word is present, set as FAKE
+        if any(indicator in text_lower for indicator in fake_indicators):
+            result = "FAKE"
+        else:
+            # Make prediction
+            prediction = model.predict([news_text])[0]
+            # Convert prediction to human-readable format
+            result = "FAKE" if prediction == 0 else "REAL"
+
         # Save the detection to database
         detection = Detection(
             user_id=current_user.id,
@@ -142,7 +174,7 @@ def predict():
         )
         db.session.add(detection)
         db.session.commit()
-        
+
         return jsonify({
             'status': 'success',
             'prediction': result,

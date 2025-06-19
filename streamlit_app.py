@@ -7,6 +7,20 @@ import hashlib
 import re
 import secrets
 import base64
+import joblib
+import numpy as np
+
+# Load the best model and vectorizer
+@st.cache_resource
+def load_model():
+    """Load the best fake news detection model and vectorizer"""
+    try:
+        model = joblib.load('models/best_fake_news_model.pkl')
+        vectorizer = joblib.load('models/tfidf_vectorizer.pkl')
+        return model, vectorizer
+    except Exception as e:
+        st.error(f"Error loading model: {str(e)}")
+        return None, None
 
 # Initialize session state for authentication
 if 'authenticated' not in st.session_state:
@@ -228,24 +242,55 @@ def get_user_history(user_id):
 init_db()
 
 def predict_fake_news(text):
-    """Simple text-based fake news detection"""
-    # List of keywords that might indicate fake news
-    fake_indicators = [
-        'viral', 'kononnya', 'didakwa', 'tidak rasmi', 'sumber tidak rasmi',
-        'dikatakan', 'tular', 'dakwaan', 'khabar angin'
-    ]
-    
-    # Convert text to lowercase for case-insensitive matching
-    text_lower = text.lower()
-    
-    # Count how many fake news indicators are present
-    indicator_count = sum(1 for indicator in fake_indicators if indicator in text_lower)
-    
-    # Make prediction based on indicators
-    if indicator_count >= 2:
-        return "FAKE", "High" if indicator_count > 3 else "Medium"
-    else:
-        return "REAL", "Medium"
+    """Use the best Random Forest model for fake news detection"""
+    try:
+        # Load model and vectorizer
+        model, vectorizer = load_model()
+        
+        if model is None or vectorizer is None:
+            return "ERROR", "Model loading failed"
+        
+        # Preprocess the text
+        # Remove special characters and normalize
+        text_cleaned = re.sub(r'[^\w\s]', '', text.lower())
+        
+        # Vectorize the text
+        text_vectorized = vectorizer.transform([text_cleaned])
+        
+        # Make prediction
+        prediction = model.predict(text_vectorized)[0]
+        probabilities = model.predict_proba(text_vectorized)[0]
+        
+        # Get confidence score
+        confidence_score = max(probabilities)
+        
+        # Determine prediction and confidence level
+        if prediction == 0:  # Fake news
+            result = "FAKE"
+            if confidence_score >= 0.9:
+                confidence_level = "Very High"
+            elif confidence_score >= 0.8:
+                confidence_level = "High"
+            elif confidence_score >= 0.7:
+                confidence_level = "Medium"
+            else:
+                confidence_level = "Low"
+        else:  # Real news
+            result = "REAL"
+            if confidence_score >= 0.9:
+                confidence_level = "Very High"
+            elif confidence_score >= 0.8:
+                confidence_level = "High"
+            elif confidence_score >= 0.7:
+                confidence_level = "Medium"
+            else:
+                confidence_level = "Low"
+        
+        return result, confidence_level, confidence_score, probabilities
+        
+    except Exception as e:
+        st.error(f"Error in prediction: {str(e)}")
+        return "ERROR", "Prediction failed", 0.0, [0.0, 0.0]
 
 def validate_news_text(text):
     """Validate the input news text"""
@@ -266,12 +311,23 @@ def show_main_app():
     st.title("Malay Fake News Detection")
     st.write(f"Welcome, {st.session_state.username}!")
     
+    # Display model information
+    with st.expander("ℹ️ Model Information"):
+        st.markdown("""
+        **Model Details:**
+        - **Algorithm**: Random Forest Classifier
+        - **Accuracy**: 100% on test data
+        - **Features**: TF-IDF vectorization (10,000 features)
+        - **Training Data**: Balanced dataset of Malay news articles
+        - **Performance**: Zero false positives/negatives on test set
+        """)
+    
     if st.button("Logout"):
         st.session_state.authenticated = False
         st.session_state.username = None
         st.rerun()
     
-    st.write("This tool uses text analysis to detect potential fake news in Malay language texts.")
+    st.write("This tool uses advanced machine learning to detect potential fake news in Malay language texts.")
     
     st.markdown("""
     ### 📝 News Text Requirements
@@ -303,24 +359,57 @@ def show_main_app():
             st.error(f"❌ {error_message}")
             st.info("👆 Please check the example format above and try again.")
         else:
-            prediction, confidence = predict_fake_news(news_text)
-            result_color = "#ff6b6b" if prediction == "FAKE" else "#51cf66"
-            st.markdown(f"""
-            <div style='padding: 20px; border-radius: 5px; background-color: {result_color}; color: white;'>
-                <h3>Prediction: {prediction}</h3>
-                <p>Confidence: {confidence}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            # Show loading spinner
+            with st.spinner("Analyzing news content..."):
+                result = predict_fake_news(news_text)
             
-            try:
-                # Save detection to history
-                user_id = get_user_id(st.session_state.username)
-                if user_id is not None:
-                    save_detection(user_id, news_text, prediction, confidence)
+            if len(result) == 4:  # Successful prediction
+                prediction, confidence_level, confidence_score, probabilities = result
+                
+                # Determine color based on prediction
+                if prediction == "FAKE":
+                    result_color = "#ff6b6b"
+                    icon = "🚨"
+                elif prediction == "REAL":
+                    result_color = "#51cf66"
+                    icon = "✅"
                 else:
-                    st.error("Error: Could not find user ID")
-            except Exception as e:
-                st.error(f"Error saving detection: {str(e)}")
+                    result_color = "#ffd43b"
+                    icon = "⚠️"
+                
+                # Display result
+                st.markdown(f"""
+                <div style='padding: 20px; border-radius: 10px; background-color: {result_color}; color: white; margin: 20px 0;'>
+                    <h2>{icon} Prediction: {prediction}</h2>
+                    <p><strong>Confidence Level:</strong> {confidence_level}</p>
+                    <p><strong>Confidence Score:</strong> {confidence_score:.1%}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Display probability breakdown
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Fake News Probability", f"{probabilities[0]:.1%}")
+                with col2:
+                    st.metric("Real News Probability", f"{probabilities[1]:.1%}")
+                
+                # Add explanation
+                if prediction == "FAKE":
+                    st.warning("⚠️ This content shows characteristics commonly associated with fake news. Please verify the information from reliable sources.")
+                elif prediction == "REAL":
+                    st.success("✅ This content appears to be from a reliable source. However, always verify important information independently.")
+                
+                try:
+                    # Save detection to history
+                    user_id = get_user_id(st.session_state.username)
+                    if user_id is not None:
+                        save_detection(user_id, news_text, prediction, f"{confidence_level} ({confidence_score:.1%})")
+                    else:
+                        st.error("Error: Could not find user ID")
+                except Exception as e:
+                    st.error(f"Error saving detection: {str(e)}")
+            else:
+                st.error(f"❌ {result[1]}")
     
     # Show detection history
     st.subheader("Detection History")

@@ -1,0 +1,18 @@
+{
+  "model_name": "Random Forest",
+  "accuracy": 1.0,
+  "f1_score": 1.0,
+  "confusion_matrix": [
+    [
+      393,
+      0
+    ],
+    [
+      0,
+      393
+    ]
+  ],
+  "training_date": "2025-06-20 02:14:35",
+  "dataset_size": 786,
+  "features": 10000
+}
