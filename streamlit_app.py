@@ -242,9 +242,205 @@ def get_user_history(user_id):
 init_db()
 
 def predict_fake_news(text):
-    """Use the best Random Forest model for fake news detection"""
+    """Use the best Random Forest model for fake news detection with definitive fake indicators"""
     try:
-        # Load model and vectorizer
+        # List of definitive fake news indicators (if any of these exist, it's confirmed fake)
+        definitive_fake_indicators = [
+            # Basic fake indicators
+            'kononnya', 'konon-konon', 'viral', 'tular',
+            'sumber tidak rasmi', 'tidak dapat dipastikan', 
+            'dikatakan', 'khabar angin', 'dakwaan palsu',
+            'berita palsu', 'tidak sahih', 'tidak benar',
+            'penipuan', 'scam', 'tipu', 'palsu',
+            'tidak disahkan', 'belum disahkan',
+            'jangan percaya', 'hoax', 'fake news',
+            'tidak pasti kesahihan', 'dakwaan tidak berasas',
+            
+            # Uncertainty indicators
+            'mungkin', 'barangkali', 'agaknya', 'rasanya',
+            'sepertinya', 'nampaknya', 'kelihatannya',
+            'dengar-dengar', 'khabar angin', 'cerita orang',
+            'kata orang', 'menurut sumber', 'sumber dalaman',
+            'sumber yang tidak mahu namanya didedahkan',
+            'sumber yang enggan dikenali',
+            
+            # Sensationalist language
+            'mengejutkan', 'terkejut', 'kejutan besar',
+            'berita terbaru', 'berita eksklusif', 'berita panas',
+            'berita hangat', 'berita terkini', 'berita terhangat',
+            'berita terpanas', 'berita eksklusif',
+            'berita yang menggemparkan', 'berita yang mengejutkan',
+            'berita yang menggegarkan', 'berita yang menggoncang',
+            
+            # Urgency and pressure
+            'segera', 'cepat', 'tergesa-gesa', 'dalam masa singkat',
+            'jangan lewat', 'jangan tunggu', 'bertindak sekarang',
+            'kesempatan terakhir', 'peluang terakhir',
+            'tawaran terhad', 'tawaran istimewa',
+            'jangan ketinggalan', 'jangan terlepas',
+            
+            # Emotional manipulation
+            'jangan percaya', 'jangan mudah percaya',
+            'berhati-hati', 'waspada', 'awas',
+            'jangan tertipu', 'jangan terpedaya',
+            'jangan terpengaruh', 'jangan terikut',
+            'jangan terpedaya', 'jangan terperangkap',
+            
+            # Unverified claims
+            'tidak disahkan', 'belum disahkan', 'tidak dapat disahkan',
+            'tidak pasti', 'tidak jelas', 'tidak terang',
+            'tidak jelas sumbernya', 'tidak diketahui sumbernya',
+            'sumber tidak jelas', 'sumber tidak pasti',
+            'sumber tidak boleh dipercayai',
+            
+            # Gossip and rumors
+            'khabar angin', 'cerita orang', 'kata orang',
+            'dengar-dengar', 'khabar burung', 'cerita burung',
+            'khabar mulut', 'cerita mulut', 'khabar lidah',
+            'cerita lidah', 'khabar telinga', 'cerita telinga',
+            
+            # Suspicious patterns
+            'klik di sini', 'klik link', 'klik pautan',
+            'dapatkan wang', 'dapatkan duit', 'dapatkan bayaran',
+            'dapatkan ganjaran', 'dapatkan hadiah',
+            'percuma', 'gratis', 'tanpa bayaran',
+            'tawaran percuma', 'tawaran gratis',
+            
+            # Authority claims without verification
+            'menurut pakar', 'kata pakar', 'kata doktor',
+            'kata profesor', 'kata saintis', 'kata penyelidik',
+            'menurut kajian', 'kata kajian', 'kata penyelidikan',
+            'menurut laporan', 'kata laporan',
+            
+            # Conspiracy indicators
+            'rahsia', 'tersembunyi', 'tidak diketahui umum',
+            'tidak didedahkan', 'tidak disiarkan',
+            'tidak dilaporkan', 'tidak diberitahu',
+            'tidak dimaklumkan', 'tidak disebarkan',
+            'tidak disampaikan', 'tidak disebar',
+            
+            # Miracle and extraordinary claims
+            'ajaib', 'mukjizat', 'keajaiban',
+            'tidak masuk akal', 'sukar dipercayai',
+            'sukar difahami', 'sukar diterima',
+            'tidak logik', 'tidak munasabah',
+            'tidak masuk akal', 'tidak berasas',
+            
+            # Social media indicators
+            'viral di facebook', 'viral di instagram',
+            'viral di twitter', 'viral di tiktok',
+            'tular di facebook', 'tular di instagram',
+            'tular di twitter', 'tular di tiktok',
+            'trending di facebook', 'trending di instagram',
+            'trending di twitter', 'trending di tiktok',
+            
+            # Financial scams
+            'wang mudah', 'duit mudah', 'wang cepat',
+            'duit cepat', 'wang pantas', 'duit pantas',
+            'wang ringkas', 'duit ringkas', 'wang senang',
+            'duit senang', 'wang gampang', 'duit gampang',
+            
+            # Health scams
+            'ubat ajaib', 'ubat mujarab', 'ubat berkesan',
+            'ubat terbaik', 'ubat terhebat', 'ubat terunggul',
+            'ubat terbaik', 'ubat terhebat', 'ubat terunggul',
+            'ubat terbaik', 'ubat terhebat', 'ubat terunggul',
+            
+            # Political manipulation
+            'jangan percaya kerajaan', 'jangan percaya pemimpin',
+            'jangan percaya parti', 'jangan percaya ahli politik',
+            'kerajaan tipu', 'pemimpin tipu', 'parti tipu',
+            'ahli politik tipu', 'kerajaan palsu',
+            'pemimpin palsu', 'parti palsu',
+            
+            # Religious manipulation
+            'jangan percaya ulama', 'jangan percaya ustaz',
+            'jangan percaya tok guru', 'jangan percaya imam',
+            'ulama tipu', 'ustaz tipu', 'tok guru tipu',
+            'imam tipu', 'ulama palsu', 'ustaz palsu',
+            'tok guru palsu', 'imam palsu',
+            
+            # Celebrity gossip
+            'artis', 'selebriti', 'bintang', 'pelakon',
+            'penyanyi', 'pemuzik', 'model', 'influencer',
+            'youtuber', 'tiktoker', 'instagrammer',
+            'facebooker', 'twitterer', 'blogger',
+            
+            # Technology scams
+            'hack', 'hacker', 'virus', 'malware',
+            'spyware', 'adware', 'trojan', 'worm',
+            'phishing', 'scam', 'fraud', 'penipuan',
+            'tipu', 'palsu', 'hoax', 'fake',
+            
+            # Lottery and gambling
+            'loteri', 'lottery', 'judi', 'gambling',
+            'kasino', 'casino', 'slot', 'slot machine',
+            'poker', 'blackjack', 'roulette', 'baccarat',
+            'craps', 'dice', 'dadu', 'kartu',
+            
+            # Investment scams
+            'pelaburan', 'investment', 'saham', 'stock',
+            'bon', 'bond', 'forex', 'crypto',
+            'bitcoin', 'ethereum', 'dogecoin', 'shiba',
+            'nft', 'token', 'coin', 'currency',
+            
+            # Dating scams
+            'jodoh', 'dating', 'cari jodoh', 'cari pasangan',
+            'cari kekasih', 'cari teman', 'cari kawan',
+            'cari sahabat', 'cari rakan', 'cari teman hidup',
+            'cari pasangan hidup', 'cari jodoh hidup',
+            
+            # Job scams
+            'kerja mudah', 'kerja ringan', 'kerja senang',
+            'kerja gampang', 'kerja ringkas', 'kerja pantas',
+            'kerja cepat', 'kerja segera', 'kerja terdesak',
+            'kerja terburu-buru', 'kerja tergesa-gesa',
+            
+            # Education scams
+            'ijazah mudah', 'diploma mudah', 'sijil mudah',
+            'kelulusan mudah', 'pengiktirafan mudah',
+            'akreditasi mudah', 'pensijilan mudah',
+            'pengiktirafan mudah', 'kelulusan mudah',
+            'pengiktirafan mudah', 'akreditasi mudah',
+            
+            # Property scams
+            'rumah murah', 'tanah murah', 'harta murah',
+            'properti murah', 'property murah', 'bangunan murah',
+            'kedai murah', 'pejabat murah', 'kilang murah',
+            'gudang murah', 'lading murah', 'kebun murah',
+            
+            # Travel scams
+            'percutian percuma', 'perjalanan percuma',
+            'tiket percuma', 'hotel percuma', 'makan percuma',
+            'minum percuma', 'aktiviti percuma', 'lawatan percuma',
+            'pelancongan percuma', 'rekreasi percuma',
+            'hiburan percuma', 'keseronokan percuma',
+            
+            # Product scams
+            'produk ajaib', 'produk mujarab', 'produk berkesan',
+            'produk terbaik', 'produk terhebat', 'produk terunggul',
+            'produk terbaik', 'produk terhebat', 'produk terunggul',
+            'produk terbaik', 'produk terhebat', 'produk terunggul',
+            
+            # Service scams
+            'perkhidmatan ajaib', 'perkhidmatan mujarab',
+            'perkhidmatan berkesan', 'perkhidmatan terbaik',
+            'perkhidmatan terhebat', 'perkhidmatan terunggul',
+            'perkhidmatan terbaik', 'perkhidmatan terhebat',
+            'perkhidmatan terunggul', 'perkhidmatan terbaik',
+            'perkhidmatan terhebat', 'perkhidmatan terunggul'
+        ]
+        
+        # Convert text to lowercase for case-insensitive matching
+        text_lower = text.lower()
+        
+        # Check for definitive fake indicators
+        found_indicators = [indicator for indicator in definitive_fake_indicators if indicator in text_lower]
+        if found_indicators:
+            # Return as fake with Very High confidence if definitive indicators found
+            return "FAKE", "Very High", 1.0, [1.0, 0.0]
+        
+        # If no definitive indicators, proceed with model prediction
         model, vectorizer = load_model()
         
         if model is None or vectorizer is None:
@@ -252,7 +448,7 @@ def predict_fake_news(text):
         
         # Preprocess the text
         # Remove special characters and normalize
-        text_cleaned = re.sub(r'[^\w\s]', '', text.lower())
+        text_cleaned = re.sub(r'[^\w\s]', '', text_lower)
         
         # Vectorize the text
         text_vectorized = vectorizer.transform([text_cleaned])
@@ -315,11 +511,152 @@ def show_main_app():
     with st.expander("ℹ️ Model Information"):
         st.markdown("""
         **Model Details:**
-        - **Algorithm**: Random Forest Classifier
+        - **Algorithm**: Random Forest Classifier with Definitive Indicators
         - **Accuracy**: 100% on test data
         - **Features**: TF-IDF vectorization (10,000 features)
         - **Training Data**: Balanced dataset of Malay news articles
         - **Performance**: Zero false positives/negatives on test set
+        """)
+    
+    # Display definitive fake indicators
+    with st.expander("⚠️ Definitive Fake News Indicators"):
+        st.markdown("""
+        **If any of these words/phrases are found in the text, the news is automatically classified as FAKE:**
+        
+        **🔍 Basic Indicators:**
+        - kononnya / konon-konon (supposedly)
+        - viral / tular (viral)
+        - sumber tidak rasmi (unofficial source)
+        - tidak dapat dipastikan (unverified)
+        - dikatakan (allegedly)
+        - khabar angin (rumors)
+        - dakwaan palsu (false claims)
+        - berita palsu (fake news)
+        - tidak sahih / tidak benar (not authentic/not true)
+        - penipuan / scam / tipu / palsu (fraud/scam/fake)
+        - tidak disahkan / belum disahkan (unverified)
+        - jangan percaya (don't believe)
+        - hoax / fake news
+        - tidak pasti kesahihan (uncertain authenticity)
+        - dakwaan tidak berasas (baseless claims)
+        
+        **❓ Uncertainty Indicators:**
+        - mungkin / barangkali / agaknya / rasanya (maybe/perhaps)
+        - sepertinya / nampaknya / kelihatannya (seems like/appears)
+        - dengar-dengar / cerita orang / kata orang (heard from others)
+        - menurut sumber / sumber dalaman (according to sources)
+        - sumber yang tidak mahu namanya didedahkan (anonymous sources)
+        
+        **📢 Sensationalist Language:**
+        - mengejutkan / terkejut / kejutan besar (shocking/surprising)
+        - berita terbaru / eksklusif / panas / hangat (latest/exclusive/hot news)
+        - berita yang menggemparkan / mengejutkan (shocking news)
+        
+        **⏰ Urgency & Pressure:**
+        - segera / cepat / tergesa-gesa (urgent/quick/hurried)
+        - jangan lewat / jangan tunggu / bertindak sekarang (don't wait/act now)
+        - kesempatan terakhir / peluang terakhir (last chance/opportunity)
+        - tawaran terhad / istimewa (limited/special offer)
+        
+        **😰 Emotional Manipulation:**
+        - jangan mudah percaya / berhati-hati / waspada (be careful/cautious)
+        - jangan tertipu / terpedaya / terpengaruh (don't be deceived/influenced)
+        
+        **❌ Unverified Claims:**
+        - tidak pasti / tidak jelas / tidak terang (uncertain/unclear)
+        - tidak jelas sumbernya / tidak diketahui sumbernya (unclear source)
+        - sumber tidak boleh dipercayai (unreliable source)
+        
+        **🗣️ Gossip & Rumors:**
+        - khabar burung / cerita burung / khabar mulut / cerita mulut
+        - khabar lidah / cerita lidah / khabar telinga / cerita telinga
+        
+        **🔗 Suspicious Patterns:**
+        - klik di sini / klik link / klik pautan (click here/link)
+        - dapatkan wang / duit / bayaran / ganjaran / hadiah (get money/reward)
+        - percuma / gratis / tanpa bayaran (free/no charge)
+        - tawaran percuma / gratis (free offer)
+        
+        **👨‍⚕️ Authority Claims (without verification):**
+        - menurut pakar / kata pakar / doktor / profesor / saintis
+        - menurut kajian / kata kajian / penyelidikan
+        - menurut laporan / kata laporan
+        
+        **🤫 Conspiracy Indicators:**
+        - rahsia / tersembunyi / tidak diketahui umum (secret/hidden)
+        - tidak didedahkan / disiarkan / dilaporkan (not disclosed/broadcasted)
+        
+        **✨ Miracle & Extraordinary Claims:**
+        - ajaib / mukjizat / keajaiban (miraculous/miracle)
+        - tidak masuk akal / sukar dipercayai (unbelievable/hard to believe)
+        - tidak logik / tidak munasabah (illogical/unreasonable)
+        
+        **📱 Social Media Indicators:**
+        - viral di facebook / instagram / twitter / tiktok
+        - tular di facebook / instagram / twitter / tiktok
+        - trending di facebook / instagram / twitter / tiktok
+        
+        **💰 Financial Scams:**
+        - wang mudah / duit mudah / wang cepat / duit cepat
+        - wang pantas / duit pantas / wang ringkas / duit ringkas
+        - wang senang / duit senang / wang gampang / duit gampang
+        
+        **💊 Health Scams:**
+        - ubat ajaib / mujarab / berkesan / terbaik / terhebat / terunggul
+        
+        **🏛️ Political Manipulation:**
+        - jangan percaya kerajaan / pemimpin / parti / ahli politik
+        - kerajaan tipu / pemimpin tipu / parti tipu / ahli politik tipu
+        - kerajaan palsu / pemimpin palsu / parti palsu
+        
+        **🕌 Religious Manipulation:**
+        - jangan percaya ulama / ustaz / tok guru / imam
+        - ulama tipu / ustaz tipu / tok guru tipu / imam tipu
+        - ulama palsu / ustaz palsu / tok guru palsu / imam palsu
+        
+        **⭐ Celebrity Gossip:**
+        - artis / selebriti / bintang / pelakon / penyanyi / pemuzik
+        - model / influencer / youtuber / tiktoker / instagrammer
+        - facebooker / twitterer / blogger
+        
+        **💻 Technology Scams:**
+        - hack / hacker / virus / malware / spyware / adware
+        - trojan / worm / phishing / scam / fraud
+        
+        **🎰 Lottery & Gambling:**
+        - loteri / lottery / judi / gambling / kasino / casino
+        - slot / poker / blackjack / roulette / baccarat / craps
+        
+        **📈 Investment Scams:**
+        - pelaburan / investment / saham / stock / bon / bond
+        - forex / crypto / bitcoin / ethereum / dogecoin / shiba
+        - nft / token / coin / currency
+        
+        **💕 Dating Scams:**
+        - jodoh / dating / cari jodoh / cari pasangan / cari kekasih
+        - cari teman / cari kawan / cari sahabat / cari rakan
+        
+        **💼 Job Scams:**
+        - kerja mudah / ringan / senang / gampang / ringkas
+        - kerja pantas / cepat / segera / terdesak / terburu-buru
+        
+        **🎓 Education Scams:**
+        - ijazah mudah / diploma mudah / sijil mudah
+        - kelulusan mudah / pengiktirafan mudah / akreditasi mudah
+        
+        **🏠 Property Scams:**
+        - rumah murah / tanah murah / harta murah / properti murah
+        - bangunan murah / kedai murah / pejabat murah / kilang murah
+        
+        **✈️ Travel Scams:**
+        - percutian percuma / perjalanan percuma / tiket percuma
+        - hotel percuma / makan percuma / minum percuma / aktiviti percuma
+        
+        **🛍️ Product & Service Scams:**
+        - produk ajaib / mujarab / berkesan / terbaik / terhebat / terunggul
+        - perkhidmatan ajaib / mujarab / berkesan / terbaik / terhebat / terunggul
+        
+        **Note:** These indicators are based on common patterns found in Malay fake news articles, scams, and misleading content. The presence of any of these terms triggers an automatic FAKE classification with Very High confidence.
         """)
     
     if st.button("Logout"):
@@ -327,7 +664,7 @@ def show_main_app():
         st.session_state.username = None
         st.rerun()
     
-    st.write("This tool uses advanced machine learning to detect potential fake news in Malay language texts.")
+    st.write("This tool uses advanced machine learning and definitive indicators to detect potential fake news in Malay language texts.")
     
     st.markdown("""
     ### 📝 News Text Requirements
@@ -364,7 +701,7 @@ def show_main_app():
                 result = predict_fake_news(news_text)
             
             if len(result) == 4:  # Successful prediction
-                prediction, confidence_level, confidence_score, probabilities = result
+                prediction, confidence_level, _, _ = result
                 
                 # Determine color based on prediction
                 if prediction == "FAKE":
@@ -382,16 +719,8 @@ def show_main_app():
                 <div style='padding: 20px; border-radius: 10px; background-color: {result_color}; color: white; margin: 20px 0;'>
                     <h2>{icon} Prediction: {prediction}</h2>
                     <p><strong>Confidence Level:</strong> {confidence_level}</p>
-                    <p><strong>Confidence Score:</strong> {confidence_score:.1%}</p>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                # Display probability breakdown
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Fake News Probability", f"{probabilities[0]:.1%}")
-                with col2:
-                    st.metric("Real News Probability", f"{probabilities[1]:.1%}")
                 
                 # Add explanation
                 if prediction == "FAKE":
@@ -403,7 +732,7 @@ def show_main_app():
                     # Save detection to history
                     user_id = get_user_id(st.session_state.username)
                     if user_id is not None:
-                        save_detection(user_id, news_text, prediction, f"{confidence_level} ({confidence_score:.1%})")
+                        save_detection(user_id, news_text, prediction, confidence_level)
                     else:
                         st.error("Error: Could not find user ID")
                 except Exception as e:
